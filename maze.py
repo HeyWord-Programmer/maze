@@ -30,10 +30,14 @@ class Player(GameSprite):
 class Enemy(GameSprite):
     direction = "left"
 
+    def __init__(self, player_image, player_x, player_y, player_speed, x_min, x_max):
+        super().__init__(player_image, player_x, player_y, player_speed)
+        self.x_min = x_min
+        self.x_max = x_max
     def update(self):
-        if self.rect.x <= 470:
+        if self.rect.x <= self.x_min:
             self.direction = "right"
-        if self.rect.x >= win_width - 85:
+        if self.rect.x >= self.x_max:
             self.direction = "left"
 
         if self.direction == "left":
@@ -79,7 +83,9 @@ win_text = text_font.render('YOU WIN!', True, (255, 215, 0))
 lose_text = text_font.render('YOU LOSE!', True, (180, 0, 0))
 
 player = Player('hero.png', 5, win_height - 80, 4)
-monster = Enemy('cyborg.png', win_width - 80, 280, 2)
+monster_1 = Enemy('cyborg.png', win_width - 80, 280, 2, 470, win_width - 85)
+monster_2 = Enemy('cyborg_2.png', 260, 5, 2, 260, win_width - 85)
+monsters = sprite.Group(monster_1, monster_2)
 treasure = Treasure('treasure.png', win_width - 120, win_height - 80, 0)
 
 wall_color = (154, 205, 50)
@@ -89,28 +95,45 @@ walls = sprite.Group(
     Wall(250, 0, 10, 380, wall_color),
     Wall(420, 100, 10, 400, wall_color),
 )
-
+def restart():
+    global finish
+    finish = False
+    player.rect.x = 5
+    player.rect.y = win_height - 80
+    monster_1.rect.x = win_width - 80
+    monster_1.direction = "left"
+    monster_2.rect.x = 260
+    monster_2.direction = "left"
+    mixer.music.play()
+    
 game = True
 finish = False
 while game:
     for e in event.get():
         if e.type == QUIT:
             game = False
+        if e.type == KEYDOWN and e.key == K_r:
+            restart()
 
     if not finish:
         window.blit(background, (0, 0))
         player.update()
-        monster.update()
+        monsters.update()
 
         player.reset()
-        monster.reset()
+        monsters.draw(window)
         treasure.reset()
         for w in walls:
             w.draw_wall()
 
-        if sprite.collide_rect(player, monster) or sprite.spritecollide(player, walls, False):
+        if sprite.spritecollide(player, monsters, False):
             finish = True
             window.blit(lose_text, lose_text.get_rect(center=(win_width // 2, win_height // 2)))
+            kick.play()
+        
+        elif sprite.spritecollide(player, walls, False):
+            player.rect.x = 5
+            player.rect.y = win_height - 80
             kick.play()
 
         elif sprite.collide_rect(player, treasure):
